@@ -1,18 +1,44 @@
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { MessageCircle } from "lucide-react";
 
 
 export default function Navbar() {
-  const whatsappNumber = "51965741718"; 
-  const defaultMessage = encodeURIComponent(
+   const [showNavbar, setShowNavbar] = useState(true);
+   const [lastScrollY, setLastScrollY] = useState(0);
+   const whatsappNumber = "51932297805"; 
+   const defaultMessage = encodeURIComponent(
     "¡Hola! Me gustaría obtener información sobre las prendas del catálogo."
   );
+
+   useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+
+      
+      if (currentScrollY > lastScrollY && currentScrollY > 50) {
+        setShowNavbar(false);
+      } else {
+        
+        setShowNavbar(true);
+      }
+
+      setLastScrollY(currentScrollY);
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [lastScrollY]);
+
+
   
   const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${defaultMessage}`;
   return (
-    <header className="sticky top-0 z-30   bg-white-chic/70 backdrop-blur-md">
-      <nav className="mx-auto flex max-w-7xl items-center justify-between px-4 py-2">
+    <header className={`relative  w-full z-10  bg-white-chic/70 backdrop-blur-md transition-transform duration-400 ease-in-out ${
+        showNavbar ? "translate-y-0" : "-translate-y-full"
+      }`}>
+      <nav className="mx-auto flex max-w-7xl items-center justify-between px-2 py-2">
         <Link href="/" >
           <Image
              src="/branding/logojomistore.png"

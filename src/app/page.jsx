@@ -82,7 +82,7 @@ export default function HomeMenuPage() {
 
       <section className="mx-auto w-full max-w-10xl px-4 py-8 sm:px-6 lg:px-8 lg:py-12">
         <div className="text-center">
-          <h1 className="font-title text-5xl font-bold">
+          <h1 className="font-title text-5xl text-black-chic font-bold">
             Nuestro Catalogo
           </h1>
         </div>
@@ -107,7 +107,7 @@ export default function HomeMenuPage() {
       })}
      </div>
 
-        <div className="mt-10 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div className=" mt-10 flex snap-x snap-mandatory gap-4 overflow-x-auto overscroll-x-contain pb-4 sm:grid sm:grid-cols-2 sm:overflow-visible sm:pb-0 lg:grid-cols-3 xl:grid-cols-4 ">
           {productosFiltrados.map((producto) => (
             <ProductCard
               key={producto.id}
