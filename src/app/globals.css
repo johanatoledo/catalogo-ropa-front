@@ -146,53 +146,8 @@ select {
   object-fit: cover;
   object-position: center;
 
-  .transition-transform {
- transition-property: transform, translate, scale, rotate;
- transition-timing-function: var(--tw-ease, var(--default-transition-timing-function) /* cubic-bezier(0.4, 0, 0.2, 1) */);
- transition-duration: var(--tw-duration, var(--default-transition-duration) /* 150ms */);
-}
 
-.duration-700 {
- --tw-duration: 700ms;
- transition-duration: 700ms;
-}
-@property --tw-duration {
- syntax: "*";
- inherits: false;
-}
-.ease-out {
- --tw-ease: var(--ease-out) /* cubic-bezier(0, 0, 0.2, 1) */;
- transition-timing-function: var(--ease-out) /* cubic-bezier(0, 0, 0.2, 1) */;
-}
-@property --tw-ease {
- syntax: "*";
- inherits: false;
-}
-.group-hover\:scale-105 {
- &:is(:where(.group):hover *) {
- @media (hover: hover) {
- --tw-scale-x: 105%;
- --tw-scale-y: 105%;
- --tw-scale-z: 105%;
- scale: var(--tw-scale-x) var(--tw-scale-y);
- }
- }
-}
-@property --tw-scale-x {
- syntax: "*";
- inherits: false;
- initial-value: 1;
-}
-@property --tw-scale-y {
- syntax: "*";
- inherits: false;
- initial-value: 1;
-}
-@property --tw-scale-z {
- syntax: "*";
- inherits: false;
- initial-value: 1;
-}
+
 
 }
 /* ===== SCROLLBAR ===== */
