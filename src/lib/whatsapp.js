@@ -72,10 +72,8 @@ export function crearMensajeCompraMultipleWhatsApp(selecciones = []) {
   }
 
   const lineas = [
-    `¡Hola ${STORE_CONFIG.name}! 👋`,
-    "",
+    `¡Hola ${STORE_CONFIG.name}!`,
     "Me interesa realizar el siguiente pedido:",
-    "",
   ];
 
   let totalPedido = 0;
@@ -107,7 +105,6 @@ export function crearMensajeCompraMultipleWhatsApp(selecciones = []) {
 
   lineas.push(
     `Total del pedido: ${STORE_CONFIG.currency.symbol} ${totalPedido.toFixed(2)}`,
-    "",
     "¿Me confirman disponibilidad y coordinamos la entrega?"
   );
 
