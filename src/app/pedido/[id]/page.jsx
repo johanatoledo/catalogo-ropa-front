@@ -1,11 +1,107 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
-import Navbar from "@/components/Navbar";
-import TimerPedido from "@/components/TimerPedido";
-import { obtenerPedido } from "@/services/pedidoService";
-import { CheckSquare, PackageCheck } from "lucide-react";
+import Link from "next/link";
+
+import Navbar from "@/components/layout/Navbar";
+import { obtenerPedido } from "@/services/pedidosService";
+import { STORE_CONFIG } from "@/config/store";
+
+import { CheckCircle2, CircleCheck, Clock3, House, MapPin, PackageCheck, PackageOpen, Phone, ShoppingBag, Store, Truck, WalletCards, } from "lucide-react";
+
+const ORDER_STATUS = {
+  pendiente: {
+    label: "Pedido recibido",
+    description:
+      "Hemos recibido tu pedido y estamos revisando la información.",
+    icon: Clock3,
+  },
+
+  confirmado: {
+    label: "Pedido confirmado",
+    description:
+      "Tu pedido fue confirmado correctamente.",
+    icon: CircleCheck,
+  },
+
+  preparando: {
+    label: "Preparando pedido",
+    description:
+      "Estamos preparando tus prendas para la entrega.",
+    icon: PackageOpen,
+  },
+
+  listo: {
+    label: "Pedido listo",
+    description:
+      "Tu pedido está listo para continuar con la entrega.",
+    icon: PackageCheck,
+  },
+
+  enviado: {
+    label: "Pedido en camino",
+    description:
+      "Tu pedido salió de JOMI Store y se encuentra en camino.",
+    icon: Truck,
+  },
+
+  entregado: {
+    label: "Pedido entregado",
+    description:
+      "Tu pedido fue entregado correctamente.",
+    icon: PackageCheck,
+  },
+
+  cancelado: {
+    label: "Pedido cancelado",
+    description:
+      "Este pedido fue cancelado.",
+    icon: Clock3,
+  },
+};
+
+function normalizarEstado(estado) {
+  return String(estado || "pendiente") .trim() .toLowerCase();
+}
+
+function normalizarMetodoEntrega(metodo) {
+  return String(metodo || "delivery") .trim() .toLowerCase();
+}
+
+function obtenerProductos(pedido) {
+  if (!pedido?.productos) {
+    return [];
+  }
+
+  if (Array.isArray(pedido.productos)) {
+    return pedido.productos;
+  }
+
+  if (typeof pedido.productos === "string") {
+    try {
+      const productos = JSON.parse(pedido.productos);
+
+      return Array.isArray(productos)
+        ? productos
+        : [];
+    } catch {
+      return [];
+    }
+  }
+
+  return [];
+}
+
+function formatearPrecio(valor) {
+  const numero = Number(valor);
+
+  if (!Number.isFinite(numero)) {
+    return "0.00";
+  }
+
+  return numero.toFixed(2);
+}
 
 export default function PedidoDetallePage() {
   const params = useParams();
@@ -13,98 +109,306 @@ export default function PedidoDetallePage() {
 
   const [pedido, setPedido] = useState(null);
   const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    if (!id) return;
+    if (!id) {
+      return;
+    }
 
-    let activo = true;
+    let componenteActivo = true;
 
     const cargarPedido = async () => {
       try {
+        setError("");
+
         const data = await obtenerPedido(id);
-        if (activo && data) {
+
+        if (componenteActivo && data) {
           setPedido(data);
         }
-      } catch (error) {
-        console.error("Error al cargar el pedido:", error);
+      } catch (errorPedido) {
+        console.error(
+          "Error al cargar el pedido:",
+          errorPedido
+        );
+
+        if (componenteActivo) {
+          setError(
+            errorPedido?.message ||
+              "No pudimos cargar la información del pedido."
+          );
+        }
       } finally {
-        if (activo) {
+        if (componenteActivo) {
           setCargando(false);
         }
       }
     };
 
-    // Carga inicial
     cargarPedido();
 
-    // Polling cada 4 segundos para actualizar el estado cuando Admin confirme el pago
-    const intervalo = window.setInterval(() => {
-      cargarPedido();
-    }, 4000);
+    /*
+     * Dejamos preparado el polling para Business.
+     *
+     * Cuando conectemos el backend real, permitirá que
+     * el cliente vea cambios realizados desde el panel
+     * administrativo sin recargar manualmente.
+     */
+    const intervalo = window.setInterval(
+      cargarPedido,
+      15000
+    );
 
     return () => {
-      activo = false;
+      componenteActivo = false;
+
       window.clearInterval(intervalo);
     };
   }, [id]);
 
-  if (cargando) {
-    return (
-      <main className="min-h-screen bg-white-chic">
-        <Navbar />
-        <div className="flex justify-center p-10">
-          <p className="font-black text-gray-700 animate-pulse">
-            Cargando estado del pedido...
-          </p>
-        </div>
-      </main>
-    );
-  }
-
-  if (!pedido) {
-    return (
-      <main className="min-h-screen bg-white-chic">
-        <Navbar />
-        <div className="flex justify-center p-10">
-          <p className="font-black text-red-600">Pedido no encontrado.</p>
-        </div>
-      </main>
-    );
-  }
-
-  // Parsear productos de forma segura
-  let productos = [];
-  try {
-    productos =
-      typeof pedido.productos === "string"
-        ? JSON.parse(pedido.productos)
-        : pedido.productos || [];
-  } catch {
-    productos = [];
-  }
-
-  // Normalizar booleano de pago
-  const pagoVerificado = Boolean(
-    pedido.pago_verificado === 1 ||
-      pedido.pago_verificado === "1" ||
-      pedido.pago_verificado === true
+  const productos = useMemo(
+    () => obtenerProductos(pedido),
+    [pedido]
   );
 
-  // Vista de Pedido Entregado
-  if (pedido.estado?.toLowerCase() === "entregado") {
+  if (cargando) {
     return (
-      <main className="min-h-screen bg-white-chic">
+      <main className="min-h-screen bg-jomi-white">
         <Navbar />
-        <section className="mx-auto max-w-3xl px-6 py-10">
-          <div className="rounded-3xl bg-emerald-600 p-8 shadow-xl text-white">
-            <div className="flex w-full flex-col items-center justify-center p-4">
-              <PackageCheck size={160} className="mb-4 text-emerald-100" />
-              <p className="text-xs font-black uppercase tracking-widest text-emerald-200">
-                Pedido entregado
+
+        <section className="jomi-container py-16">
+          <div className="mx-auto max-w-3xl">
+            <div
+              className="
+                flex
+                min-h-72
+                flex-col
+                items-center
+                justify-center
+                rounded-3xl
+                border
+                border-jomi-border
+                bg-white
+                px-6
+                text-center
+              "
+            >
+              <div
+                className="
+                  h-10
+                  w-10
+                  animate-spin
+                  rounded-full
+                  border-4
+                  border-jomi-primary/20
+                  border-t-jomi-primary
+                "
+              />
+
+              <p className="mt-5 text-sm font-medium text-black/60">
+                Cargando información de tu pedido...
               </p>
-              <h1 className="mt-2 text-2xl font-black text-center">
-                ¡Gracias por tu compra!
+            </div>
+          </div>
+        </section>
+      </main>
+    );
+  }
+
+  if (error || !pedido) {
+    return (
+      <main className="min-h-screen bg-jomi-white">
+        <Navbar />
+
+        <section className="jomi-container py-16">
+          <div className="mx-auto max-w-xl">
+            <div
+              className="
+                rounded-3xl
+                border
+                border-jomi-sale/20
+                bg-white
+                px-6
+                py-12
+                text-center
+                shadow-sm
+              "
+            >
+              <PackageOpen
+                size={52}
+                className="mx-auto text-jomi-sale"
+              />
+
+              <h1 className="mt-5 text-2xl font-semibold text-jomi-black">
+                No encontramos tu pedido
               </h1>
+
+              <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-black/55">
+                {error ||
+                  "Verifica que el número del pedido sea correcto."}
+              </p>
+
+              <Link
+                href="/"
+                className="
+                  mt-7
+                  inline-flex
+                  items-center
+                  justify-center
+                  gap-2
+                  rounded-xl
+                  bg-jomi-primary
+                  px-5
+                  py-3
+                  text-sm
+                  font-semibold
+                  text-jomi-white
+                  transition
+                  hover:bg-jomi-secondary
+                "
+              >
+                <House size={17} />
+
+                Volver al catálogo
+              </Link>
+            </div>
+          </div>
+        </section>
+      </main>
+    );
+  }
+
+  const estado =
+    normalizarEstado(pedido.estado);
+
+  const status = ORDER_STATUS[estado] || ORDER_STATUS.pendiente;
+
+  const StatusIcon = status.icon;
+
+  const metodoEntrega =
+    normalizarMetodoEntrega( pedido.metodo_entrega || pedido.delivery_method );
+
+  const esDelivery = metodoEntrega === "delivery";
+
+  const pedidoEntregado = estado === "entregado";
+
+  const total =
+    pedido.total ??
+    productos.reduce((acumulado, item) => acumulado + Number(item.precio || 0) * Number(item.cantidad || 0), 0 );
+
+  if (pedidoEntregado) {
+    return (
+      <main className="min-h-screen bg-jomi-white">
+        <Navbar />
+
+        <section className="jomi-container py-10 sm:py-16">
+          <div className="mx-auto max-w-3xl">
+            <div
+              className="
+                overflow-hidden
+                rounded-3xl
+                border
+                border-jomi-secondary/20
+                bg-white
+                shadow-sm
+              "
+            >
+              <div
+                className="
+                  flex
+                  flex-col
+                  items-center
+                  bg-jomi-secondary/10
+                  px-6
+                  py-12
+                  text-center
+                "
+              >
+                <div
+                  className="
+                    flex
+                    h-24
+                    w-24
+                    items-center
+                    justify-center
+                    rounded-full
+                    bg-jomi-secondary
+                    text-white
+                  "
+                >
+                  <PackageCheck size={48} />
+                </div>
+
+                <p
+                  className="
+                    mt-6
+                    text-xs
+                    font-semibold
+                    uppercase
+                    tracking-[0.2em]
+                    text-jomi-secondary
+                  "
+                >
+                  Pedido entregado
+                </p>
+
+                <h1
+                  className="
+                    mt-2
+                    text-3xl
+                    font-semibold
+                    text-jomi-black
+                  "
+                >
+                  ¡Gracias por tu compra!
+                </h1>
+
+                <p
+                  className="
+                    mx-auto
+                    mt-3
+                    max-w-md
+                    text-sm
+                    leading-6
+                    text-black/60
+                  "
+                >
+                  Esperamos que disfrutes tus prendas de
+                  JOMI Store.
+                </p>
+              </div>
+
+              <div className="px-6 py-7 text-center">
+                <p className="text-sm text-black/50">
+                  Pedido
+                </p>
+
+                <p className="mt-1 font-semibold text-jomi-black">
+                  #{pedido.id}
+                </p>
+
+                <Link
+                  href="/"
+                  className="
+                    mt-6
+                    inline-flex
+                    items-center
+                    justify-center
+                    rounded-xl
+                    bg-jomi-primary
+                    px-5
+                    py-3
+                    text-sm
+                    font-semibold
+                    text-jomi-white
+                    transition
+                    hover:bg-jomi-secondary
+                  "
+                >
+                  Seguir comprando
+                </Link>
+              </div>
             </div>
           </div>
         </section>
@@ -113,78 +417,412 @@ export default function PedidoDetallePage() {
   }
 
   return (
-    <main className="min-h-screen bg-white-chic">
+    <main className="min-h-screen bg-jomi-white">
       <Navbar />
 
-      <section className="mx-auto max-w-3xl px-6 py-10">
-        <div className="rounded-3xl bg-white-chic p-6 md:p-8 shadow-xl">
-          {/* Encabezado del Pedido */}
-          <div className="flex w-full items-center justify-center">
-            <div className="flex flex-col items-center rounded-2xl bg-green-50 p-6 text-green-700 w-full border border-green-100">
-              <CheckSquare size={64} className="mb-2 opacity-90" />
-              <h1 className="text-center font-black uppercase text-lg text-green-800">
-                Pedido generado correctamente
+      <section className="jomi-container py-8 sm:py-12">
+        <div className="mx-auto max-w-3xl">
+          {/* Confirmación */}
+          <section
+            className="
+              rounded-3xl
+              border
+              border-jomi-primary/15
+              bg-white
+              p-6
+              shadow-sm
+              sm:p-8
+            "
+          >
+            <div className="flex flex-col items-center text-center">
+              <div
+                className="
+                  flex
+                  h-16
+                  w-16
+                  items-center
+                  justify-center
+                  rounded-full
+                  bg-jomi-primary/10
+                  text-jomi-primary
+                "
+              >
+                <CheckCircle2 size={34} />
+              </div>
+
+              <p
+                className="
+                  mt-5
+                  text-[11px]
+                  font-semibold
+                  uppercase
+                  tracking-[0.2em]
+                  text-jomi-secondary
+                "
+              >
+                JOMI Store
+              </p>
+
+              <h1
+                className="
+                  mt-2
+                  text-2xl
+                  font-semibold
+                  text-jomi-black
+                  sm:text-3xl
+                "
+              >
+                Tu pedido fue registrado
               </h1>
+
+              <p
+                className="
+                  mt-3
+                  max-w-lg
+                  text-sm
+                  leading-6
+                  text-black/55
+                "
+              >
+                Conserva el número de pedido para
+                consultar su estado.
+              </p>
+
+              <div
+                className="
+                  mt-5
+                  rounded-full
+                  bg-jomi-soft
+                  px-5
+                  py-2
+                  text-sm
+                  font-semibold
+                  text-jomi-black
+                "
+              >
+                Pedido #{pedido.id}
+              </div>
             </div>
-          </div>
+          </section>
 
-          {/* Datos del Cliente y Estado */}
-          <div className="mt-6 rounded-2xl border border-gray-100 bg-gray-50/50 p-5 space-y-1.5">
-            <div className="flex items-center justify-between flex-wrap gap-2">
-              <span className="font-black text-gray-900 text-sm uppercase">
-                Estado actual:{" "}
-                <span className="text-amber-700 font-extrabold">
-                  {pagoVerificado ? pedido.estado || "Preparando pedido" : "Pendiente de pago"}
-                </span>
-              </span>
-              <span className="text-xs font-bold text-gray-500">
-                ID Pedido #{pedido.id}
-              </span>
+          {/* Estado */}
+          <section
+            className="
+              mt-5
+              rounded-3xl
+              border
+              border-jomi-border
+              bg-white
+              p-6
+              sm:p-7
+            "
+          >
+            <div className="flex items-start gap-4">
+              <div
+                className="
+                  flex
+                  h-12
+                  w-12
+                  shrink-0
+                  items-center
+                  justify-center
+                  rounded-full
+                  bg-jomi-secondary/10
+                  text-jomi-secondary
+                "
+              >
+                <StatusIcon size={23} />
+              </div>
+
+              <div>
+                <p className="text-xs font-medium uppercase tracking-[0.15em] text-black/45">
+                  Estado actual
+                </p>
+
+                <h2 className="mt-1 text-lg font-semibold text-jomi-black">
+                  {status.label}
+                </h2>
+
+                <p className="mt-1 text-sm leading-6 text-black/55">
+                  {status.description}
+                </p>
+              </div>
             </div>
-            <p className="text-sm font-bold text-gray-800">
-              Cliente: {pedido.cliente_nombre}
-            </p>
-            
-          </div>
+          </section>
 
-          {/* Detalle de Productos */}
-          <div className="mt-6">
-            0<p className="font-black text-gray-900 text-sm">Detalle del pedido</p>
+          {/* Cliente y entrega */}
+          <section
+            className="
+              mt-5
+              grid
+              gap-4
+              sm:grid-cols-2
+            "
+          >
+            <div
+              className="
+                rounded-3xl
+                border
+                border-jomi-border
+                bg-white
+                p-6
+              "
+            >
+              <h2 className="font-semibold text-jomi-black">
+                Datos del pedido
+              </h2>
 
-            <ul className="mt-3 space-y-2">
-              {productos.map((item, index) => (
-                <li
-                  key={item.id || index}
-                  className="flex justify-between items-center rounded-xl bg-gray-50 px-4 py-3 text-sm font-bold text-gray-700 border border-gray-100"
-                >
+              <div className="mt-5 space-y-4">
+                <div className="flex gap-3">
+                  <ShoppingBag
+                    size={18}
+                    className="mt-0.5 shrink-0 text-jomi-primary"
+                  />
+
                   <div>
-                    <span className="font-black text-amber-800 mr-2">
-                      {item.cantidad}x
-                    </span>
-                    <span>{item.nombre}</span>
+                    <p className="text-xs text-black/45">
+                      Cliente
+                    </p>
+
+                    <p className="mt-1 text-sm font-medium text-jomi-black">
+                      {pedido.cliente_nombre ||
+                        pedido.clienteNombre ||
+                        "Cliente"}
+                    </p>
                   </div>
-                  <span className="text-gray-900 font-mono">
-                    S/ {Number(item.precio || 0).toFixed(2)}
-                  </span>
-                </li>
-              ))}
-            </ul>
+                </div>
 
-            <div className="mt-4 flex justify-between items-center border-t border-dashed border-gray-200 pt-3">
-              <span className="font-black text-gray-800">Total a pagar:</span>
-              <span className="font-black text-lg text-red-600">
-                S/ {Number(pedido.total || 0).toFixed(2)}
-              </span>
+                {pedido.cliente_telefono && (
+                  <div className="flex gap-3">
+                    <Phone
+                      size={18}
+                      className="mt-0.5 shrink-0 text-jomi-primary"
+                    />
+
+                    <div>
+                      <p className="text-xs text-black/45">
+                        Teléfono
+                      </p>
+
+                      <p className="mt-1 text-sm font-medium text-jomi-black">
+                        {pedido.cliente_telefono}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex gap-3">
+                  <WalletCards
+                    size={18}
+                    className="mt-0.5 shrink-0 text-jomi-primary"
+                  />
+
+                  <div>
+                    <p className="text-xs text-black/45">
+                      Forma de pago
+                    </p>
+
+                    <p className="mt-1 text-sm font-medium text-jomi-black">
+                      Pago contraentrega
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
 
-          {/* Cronómetro en Tiempo Real */}
-          <div className="mt-8">
-            <TimerPedido
-              pagoConfirmadoEn={pedido.pago_confirmado_en}
-              pagoVerificado={pagoVerificado}
-              estado={pedido.estado}
-            />
+            <div
+              className="
+                rounded-3xl
+                border
+                border-jomi-border
+                bg-white
+                p-6
+              "
+            >
+              <h2 className="font-semibold text-jomi-black">
+                Entrega
+              </h2>
+
+              <div className="mt-5 flex gap-3">
+                {esDelivery ? (
+                  <Truck
+                    size={20}
+                    className="mt-0.5 shrink-0 text-jomi-secondary"
+                  />
+                ) : (
+                  <Store
+                    size={20}
+                    className="mt-0.5 shrink-0 text-jomi-secondary"
+                  />
+                )}
+
+                <div>
+                  <p className="text-sm font-medium text-jomi-black">
+                    {esDelivery
+                      ? "Delivery"
+                      : "Recojo coordinado"}
+                  </p>
+
+                  {esDelivery && (
+                    <div className="mt-3 space-y-1 text-sm leading-6 text-black/55">
+                      {pedido.direccion?.distrito && (
+                        <p>
+                          {
+                            pedido.direccion
+                              .distrito
+                          }
+                        </p>
+                      )}
+
+                      {pedido.direccion
+                        ?.direccion && (
+                        <p>
+                          {
+                            pedido.direccion
+                              .direccion
+                          }
+                        </p>
+                      )}
+
+                      {pedido.direccion
+                        ?.referencia && (
+                        <p className="text-xs">
+                          Ref.{" "}
+                          {
+                            pedido.direccion
+                              .referencia
+                          }
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {!esDelivery && (
+                    <p className="mt-2 text-sm leading-6 text-black/55">
+                      JOMI Store se comunicará contigo
+                      para coordinar el recojo.
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* Productos */}
+          <section
+            className="
+              mt-5
+              rounded-3xl
+              border
+              border-jomi-border
+              bg-white
+              p-6
+              sm:p-7
+            "
+          >
+            <h2 className="font-semibold text-jomi-black">
+              Detalle del pedido
+            </h2>
+
+            <div className="mt-5 divide-y divide-jomi-border">
+              {productos.map((item, index) => {
+                const cantidad = Number(item.cantidad) || 0;
+                const precio = Number(item.precio) || 0;
+                const subtotal = cantidad * precio;
+
+                return (
+                  <div
+                    key={ item.variante_id || item.varianteId || item.id || index }
+                    className="
+                      flex
+                      items-start
+                      justify-between
+                      gap-4
+                      py-4
+                      first:pt-0
+                    "
+                  >
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-jomi-black">
+                        {item.nombre}
+                      </p>
+
+                      <div className=" mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-black/45 " >
+                        <span> Cantidad: {cantidad} </span>
+
+                        {item.talla && ( <span> Talla:{" "} {Array.isArray( item.talla )
+                              ? item.talla.join( " / " )
+                              : item.talla}
+                          </span> )}
+
+                        {item.color && ( <span> Color:{" "} {Array.isArray( item.color )
+                              ? item.color.join( " / " )
+                              : item.color}
+                          </span> )}
+                      </div>
+                    </div>
+
+                    <p className=" shrink-0 text-sm font-semibold text-jomi-black " >
+                      { STORE_CONFIG.currency.symbol }{" "} {formatearPrecio( subtotal )}
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className=" mt-2 border-t border-jomi-border pt-5 " >
+              {pedido.delivery_cost > 0 && (
+                <div className="mb-3 flex justify-between text-sm text-black/55">
+                  <span>Delivery</span>
+
+                  <span> { STORE_CONFIG.currency.symbol }{" "} {formatearPrecio( pedido.delivery_cost )} </span>
+                </div>
+              )}
+
+              {esDelivery &&
+                !pedido.delivery_cost && (
+                  <div className="mb-3 flex justify-between gap-4 text-sm text-black/55">
+                    <span>Delivery</span>
+                    <span className="text-right"> Por confirmar </span>
+                  </div>
+                )}
+
+              <div className="flex items-end justify-between gap-4">
+                <span className="font-semibold text-jomi-black"> Total productos </span>
+                <span className="text-xl font-bold text-jomi-black"> { STORE_CONFIG.currency .symbol }{" "} {formatearPrecio(total)} </span>
+              </div>
+            </div>
+          </section>
+
+          {/* Pago */}
+          <section className="mt-5 rounded-3xl border border-jomi-secondary/20 bg-jomi-secondary/8 p-5 " >
+            <div className="flex items-start gap-3">
+              <WalletCards
+                size={21}
+                className="mt-0.5 shrink-0 text-jomi-secondary"
+              />
+
+              <div>
+                <h2 className="font-semibold text-jomi-black"> Pago contraentrega </h2>
+
+                <p className="mt-1 text-sm leading-6 text-black/55">
+                  No necesitas realizar ningún pago
+                  anticipado. El pago se realizará al
+                  momento de recibir tu pedido.
+                </p>
+              </div>
+            </div>
+          </section>
+
+          {/* Volver */}
+          <div className="mt-7 text-center">
+            <Link
+              href="/"
+              className=" inline-flex items-center justify-center  gap-2 rounded-xl border border-jomi-primary px-5 py-3 text-sm font-semibold text-jomi-primary transition hover:bg-jomi-primary hover:text-jomi-white "
+            >
+              <House size={17} />
+              Volver al catálogo
+            </Link>
           </div>
         </div>
       </section>
