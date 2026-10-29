@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 @theme {
-  --color-lila-jomi: #877499;
+  --color-lila-jomi: #f8bdbf;
   --color-black-chic: #000000;
   --color-gold-chic: #C4890D;
   --color-white-chic: #fffdf7;
@@ -9,7 +9,7 @@
   --color-jomi-chic:#679F9F;
   --color-jomi-cian:#15B5B0;
   --color-pink-chic-hover:#f56299;
-  --color-jomi-green:#25D366;
+  --color-jomi-green:#7b9874;
   --color-jomi-red:#FF2C2C;
   
   
@@ -163,12 +163,12 @@ select {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #877499;
+  background: #f8bdbf;
   border-radius: 999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #679F9F;
+  background: #7b9874;
 }
 
 /* ===== ESTILOS TARJETAS ===== */

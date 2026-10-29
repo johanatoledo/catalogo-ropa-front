@@ -37,17 +37,17 @@ export default function Navbar() {
       <nav aria-label="Navegación principal" className="jomi-container flex min-h-20 items-center justify-between py-2">
         <Link href="/" aria-label="Ir al inicio de JOMI Store" className="inline-flex shrink-0 items-center">
           <Image
-            src="/branding/logojomistore.png"
+            src="/branding/logo-jomi-store.webp"
             alt="JOMI Store"
             width={170}
             height={80}
             loading="eager"
-            className="h-auto w-28 object-contain sm:w-32 md:w-36"
+            className="h-auto w-28 object-contain border-8 sm:w-32 md:w-36"
           />
         </Link>
 
-        <p className="hidden text-xs font-medium uppercase tracking-[0.18em] text-black/45 sm:block">
-          Moda para tu estilo
+        <p className="hidden text-xs font-medium  tracking-[0.18em] text-black/80 sm:block">
+          La gracia y el estilo se visten bien
         </p>
       </nav>
     </header>

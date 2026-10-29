@@ -25,7 +25,7 @@ export function crearMensajeCompraWhatsApp({
   const total = precio * cantidadNormalizada;
 
   const lineas = [
-    `¡Hola ${STORE_CONFIG.name}! 👋`,
+    `¡Hola ${STORE_CONFIG.name}! `,
     "",
     "Me interesa comprar la siguiente prenda:",
     "",
