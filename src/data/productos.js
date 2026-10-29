@@ -300,6 +300,16 @@ export const productos = [
     imagen: "/vestidos/vestido-lunaree-marron.webp",
     badge:"Oferta",
   },
+  {
+    id: 31,
+    nombre: "Falda Jean con Bolsillos ",
+    color:"Celeste",
+    talla:"S,M,L",
+    precio: 25,
+    categoria: "Faldas",
+    imagen: "/faldas/falda-jeans-larga-correa.png",
+    badge:"OFERTA",
+  },
   
 
 ];
